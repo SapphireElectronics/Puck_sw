@@ -3,6 +3,9 @@
 
 #pragma chip PIC12F1822
 
+#pragma config =      0x3fbc
+#pragma config reg2 = 0x1eff
+
 /* Pin mappings
 	Pn	Port	Type	Name	Chan	Details
    	1	Vdd		Pwr		Vdd				Power
@@ -15,57 +18,34 @@
    	8	Vss		Pwr		GND				Ground
 */
 
-enum { I2C_NORMAL, I2C_NO_ACK_ADDR, I2C_NO_ACK_DATA };
+/* ADXL343 Data
+	I2C Mode
+	CS is High (modified PCB)
+	Pullups are 10k (modified PCB)
+	Alt Address is high:
+		Write Addr = 0x3a 
+		Read Addr = 0x3b
+	Use 100 kHz clock
+*/
 
-uns8 i2c_tx( uns8 addr, uns8 data )
-{
-	SEN = 1;			// set Start condition
+#include "i2c.h"
 
-	while( !SSP1IF );	// wait until SSP1IF is set
-	SSP1IF = 0;
-
-	SSP1BUF = addr;		// load address
-
-	while( BF );		// wait while buffer is full
-	if( ACKSTAT )		// a slave did not acknowledge
-		return( I2C_NO_ACK_ADDR );
-	
-	SSP1BUF = data;
-	while( BF );		// wait while buffer is full
-	if( ACKSTAT )		// a slave did not acknowledge
-		return( I2C_NO_ACK_DATA );
-		
-	return( I2C_NORMAL );
-}	
-
-uns8 i2c_tx_multi( uns8 addr, uns8 *data_ptr, uns8 length )
-{
-	SEN = 1;			// set Start condition
-
-	while( !SSP1IF );	// wait until SSP1IF is set
-	SSP1IF = 0;
-
-	SSP1BUF = addr;		// load address
-
-	while( BF );		// wait while buffer is full
-	if( ACKSTAT )		// a slave did not acknowledge
-		return( I2C_NO_ACK_ADDR );
-
-
-	while( length )
-	{
-		SSP1BUF = *data_ptr++;
-		length--;
-
-		while( BF );		// wait while buffer is full
-		if( ACKSTAT )		// a slave did not acknowledge
-			return( I2C_NO_ACK_DATA );
-	}
-
-	return( I2C_NORMAL );
-}	
-
+#include "i2c.c"
 
 void main( void )
 {
+	OSCCON = 0b01101000;		// 4 MHz Fosc
+	
+	i2c_init();
+	
+	while(1)
+	{
+		i2c_tx( 0x3a, 0x55 );
+
+		char i, j;
+		for(i=0; i<255; i++ )
+			for( j=0; j<255; j++ )
+				nop();
+		
+	}	
 }	
