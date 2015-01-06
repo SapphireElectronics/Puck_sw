@@ -44,6 +44,7 @@ uns8 i2c_tx( uns8 addr, uns8 data )
 	return( I2C_NORMAL );
 }	
 
+// not finished !!
 uns8 i2c_tx_multi( uns8 addr, uns8 *data_ptr, uns8 length )
 {
 	SEN = 1;			// set Start condition
@@ -80,6 +81,45 @@ uns8 i2c_tx_multi( uns8 addr, uns8 *data_ptr, uns8 length )
 	i2c_stop();
 	return( I2C_NORMAL );
 }	
+
+uns8 i2c_rx( uns8 addr, uns8 *data )
+{
+	i2c_start();
+
+	SSP1BUF = addr;		// load address
+
+	while( !SSP1IF );
+	SSP1IF = 0;
+	
+	if( ACKSTAT )		// a slave did not acknowledge
+	{
+		i2c_stop();
+		return( I2C_NO_ACK_ADDR );
+	}	
+	
+	RCEN = 1;
+	
+	while( !SSP1IF );
+	SSP1IF = 0;
+
+	*data = SSP1BUF;
+
+	if( ACKSTAT )		// a slave did not acknowledge
+	{
+		i2c_stop();
+		return( I2C_NO_ACK_DATA );
+	}		
+	
+	i2c_stop();
+	return( I2C_NORMAL );
+}	
+
+// not finished !!
+uns8 i2c_rx_multi( uns8 addr, uns8 *data_ptr, uns8 *length )
+{
+	return( I2C_NORMAL );
+}
+
 
 // set I2C Start Condition
 void i2c_start( void )
