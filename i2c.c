@@ -16,107 +16,96 @@ void i2c_init( void )
 
 uns8 i2c_tx( uns8 addr, uns8 data )
 {
-	i2c_start();
+	i2c_start();					// send START
 
-	SSP1BUF = addr;		// load address
-
-	while( !SSP1IF );
-	SSP1IF = 0;
-	
-	if( ACKSTAT )		// a slave did not acknowledge
+	if( i2c_put_byte( addr ) )		// a slave did not acknowledge
 	{
 		i2c_stop();
 		return( I2C_NO_ACK_ADDR );
 	}	
 	
-	SSP1BUF = data;
-
-	while( !SSP1IF );
-	SSP1IF = 0;
-
-	if( ACKSTAT )		// a slave did not acknowledge
+	if( i2c_put_byte( data ) )		// a slave did not acknowledge
 	{
 		i2c_stop();
 		return( I2C_NO_ACK_DATA );
 	}		
 	
-	i2c_stop();
+	i2c_stop();						// send STOP
 	return( I2C_NORMAL );
 }	
 
-// not finished !!
+// not debugged
 uns8 i2c_tx_multi( uns8 addr, uns8 *data_ptr, uns8 length )
 {
-	SEN = 1;			// set Start condition
+	i2c_start();			// send START
 
-	while( !SSP1IF );	// wait until SSP1IF is set
-	SSP1IF = 0;
-
-	SSP1BUF = addr;		// load address
-
-	while( !SSP1IF );
-	SSP1IF = 0;
-
-	if( ACKSTAT )		// a slave did not acknowledge
+	if( i2c_put_byte( addr ) )		// a slave did not acknowledge
 	{
 		i2c_stop();
 		return( I2C_NO_ACK_ADDR );
-	}
-
+	}	
+	
 	while( length )
 	{
-		SSP1BUF = *data_ptr++;
 		length--;
 
-		while( !SSP1IF );
-		SSP1IF = 0;
-
-		if( ACKSTAT )		// a slave did not acknowledge
+		if( i2c_put_byte( *data_ptr++ ) )		// a slave did not acknowledge
 		{
 			i2c_stop();
 			return( I2C_NO_ACK_DATA );
-		}	
+		}		
 	}
 
-	i2c_stop();
+	i2c_stop();			// send STOP
 	return( I2C_NORMAL );
 }	
 
 uns8 i2c_rx( uns8 addr, uns8 *data )
 {
-	i2c_start();
+	uns8 dt;
+	i2c_start();					// send START
 
-	SSP1BUF = addr;		// load address
-
-	while( !SSP1IF );
-	SSP1IF = 0;
-	
-	if( ACKSTAT )		// a slave did not acknowledge
+	if( i2c_put_byte( addr ) )		// slave did not acknowledge
 	{
 		i2c_stop();
 		return( I2C_NO_ACK_ADDR );
 	}	
 	
-	RCEN = 1;
+	dt = i2c_get_byte();	// get a data byte
+	*data = dt;
 	
-	while( !SSP1IF );
-	SSP1IF = 0;
-
-	*data = SSP1BUF;
-
-	if( ACKSTAT )		// a slave did not acknowledge
-	{
-		i2c_stop();
-		return( I2C_NO_ACK_DATA );
-	}		
+	i2c_send_noack();		// this is the last byte
 	
-	i2c_stop();
+	i2c_stop();				// send STOP
 	return( I2C_NORMAL );
 }	
 
-// not finished !!
-uns8 i2c_rx_multi( uns8 addr, uns8 *data_ptr, uns8 *length )
+// not debugged
+uns8 i2c_rx_multi( uns8 addr, uns8 *data_ptr, uns8 length )
 {
+	uns8 dt;
+	i2c_start();					// send START
+
+	if( i2c_put_byte( addr ) )		// slave did not acknowledge
+	{
+		i2c_stop();
+		return( I2C_NO_ACK_ADDR );
+	}	
+	
+	while( length )
+	{
+		length--;
+
+		dt = i2c_get_byte();	// get a data byte
+		*data_ptr++ = dt;
+	
+		if( length )
+			i2c_send_ack();		// this is not the last byte
+	}	
+	
+	i2c_send_noack();		// this was the last byte
+	
+	i2c_stop();				// send STOP
 	return( I2C_NORMAL );
 }
 
@@ -124,7 +113,7 @@ uns8 i2c_rx_multi( uns8 addr, uns8 *data_ptr, uns8 *length )
 // set I2C Start Condition
 void i2c_start( void )
 {
-	SEN = 1;			// set Start condition
+	SEN = 1;			// set START condition
 	while( !SSP1IF );	// wait until SSP1IF is set
 	SSP1IF = 0;
 }
@@ -132,9 +121,48 @@ void i2c_start( void )
 // set I2C Stop Condition
 void i2c_stop( void )
 {
-	PEN = 1;	
+	PEN = 1;			// set STOP condition
 	while( !SSP1IF );	// wait until SSP1IF is set
 	SSP1IF = 0;
 }		
 
+void i2c_send_ack( void )
+{
+	ACKDT = 0;			// set ACK
+	ACKEN = 1;			// initiate ACK sequence;
+	while( !SSP1IF );	// wait until SSP1IF is set
+	SSP1IF = 0;
+}
+
+void i2c_send_noack( void )
+{
+	ACKDT = 1;			// set NO_ACK
+	ACKEN = 1;			// initiate ACK sequence;
+	while( !SSP1IF );	// wait until SSP1IF is set
+	SSP1IF = 0;
+}		
+
+bit i2c_get_ack( void )
+{
+	while( !SSP1IF );	// wait until SSP1IF is set
+	SSP1IF = 0;
+	return( ACKSTAT );	// return ACK value
+}
+
+bit i2c_put_byte( uns8 data )
+{
+	SSP1BUF = data;			// send data byte
+	return i2c_get_ack();	// return ACK value
+}	
+
+uns8 i2c_get_byte( void )	
+{
+	RCEN = 1;			// set as receiver
+	
+	while( !SSP1IF );	// wait until SSP1IF is set
+	SSP1IF = 0;
+
+	return( SSP1BUF );	// return received data byte
+}	
+		
 #endif //_IC2_C
