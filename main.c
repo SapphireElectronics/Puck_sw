@@ -29,8 +29,10 @@
 */
 
 #include "i2c.h"
+#include "adxl.h"
 
 #include "i2c.c"
+#include "adxl.c"
 
 void main( void )
 {
