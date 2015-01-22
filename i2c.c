@@ -34,6 +34,33 @@ uns8 i2c_tx( uns8 addr, uns8 data )
 	return( I2C_NORMAL );
 }	
 
+uns8 i2c_tx_reg( uns8 addr, uns8 reg, uns8 data )
+{
+	i2c_start();					// send START
+
+	if( i2c_put_byte( addr ) )		// a slave did not acknowledge
+	{
+		i2c_stop();
+		return( I2C_NO_ACK_ADDR );
+	}	
+	
+	if( i2c_put_byte( reg ) )		// a slave did not acknowledge
+	{
+		i2c_stop();
+		return( I2C_NO_ACK_ADDR );
+	}	
+
+	if( i2c_put_byte( data ) )		// a slave did not acknowledge
+	{
+		i2c_stop();
+		return( I2C_NO_ACK_DATA );
+	}		
+	
+	i2c_stop();						// send STOP
+	return( I2C_NORMAL );
+}	
+
+
 // not debugged
 uns8 i2c_tx_multi( uns8 addr, uns8 *data_ptr, uns8 length )
 {
@@ -115,7 +142,7 @@ void i2c_start( void )
 {
 	SEN = 1;			// set START condition
 	while( !SSP1IF );	// wait until SSP1IF is set
-	SSP1IF = 0;
+//	SSP1IF = 0;
 }
 
 // set I2C Stop Condition
@@ -152,6 +179,7 @@ bit i2c_get_ack( void )
 bit i2c_put_byte( uns8 data )
 {
 	SSP1BUF = data;			// send data byte
+	SSP1IF = 0;
 	return i2c_get_ack();	// return ACK value
 }	
 

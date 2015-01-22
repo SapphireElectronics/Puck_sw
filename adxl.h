@@ -1,6 +1,11 @@
 #ifndef _ADXL_H
 #define _ADXL_H
 
+// ADXH343 I2C Address
+#define ADXL_WR_ADDR		0x3a	// Write address
+#define ADXL_RD_ADDR		0x3b	// Read address
+
+
 // ADXH343 Register Definitions
 #define ADXL_DEVID			0x00	// R
 #define	ADXL_THRESH_TAP		0x1d	// R/W
@@ -32,6 +37,20 @@
 #define ADXL_DATAZ1			0x37	// R
 #define ADXL_FIFO_CTL		0x38	// R/W
 #define ADXL_FIFO_STATUS	0x39	// R
+
+// common acceleration data values at 62.5 mG/LSB
+#define ADXL_0G1	0x02
+#define ADXL_0G2	0x03
+#define ADXL_0G5	0x08
+#define ADXL_1G0	0x10
+#define ADXL_2G0	0x20
+#define ADXL_5G0	0x50
+#define ADXL_8G0	0x80
+#define ADXL_10G	0xa0
+#define ADXL_16G	0xff
+
+
+
 
 // External Functions
 void adxl_init( void );

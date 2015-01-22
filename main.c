@@ -34,15 +34,35 @@
 #include "i2c.c"
 #include "adxl.c"
 
+
+#define INT_PIN		PORTA.5
+#define LED_PIN		PORTA.4
+
 void main( void )
 {
 	OSCCON = 0b01101000;		// 4 MHz Fosc
 	
+	TRISA = 0b00100000;			
+	ANSELA = 0;
+	
 	i2c_init();
+	
+	adxl_init();
 	
 	while(1)
 	{
-		i2c_tx( 0x3a, 0x55 );
+		clrwdt();
+		if( LED_PIN )
+			LED_PIN = 0;
+		else
+			LED_PIN = 1;
+
+	adxl_init();
+
+			
+//		LED_PIN = INT_PIN;
+		
+//		i2c_tx( 0x3a, 0x55 );
 
 		char i, j;
 		for(i=0; i<255; i++ )
